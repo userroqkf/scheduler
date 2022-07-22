@@ -1,10 +1,9 @@
-import React, {useState, useEffect} from "react";
+import {useState, useEffect} from "react";
 import axios from 'axios';
 
-import { getAppointmentsForDay, getInterview, getInterviewersForDay} from "helpers/selectors";
+import { getAppointmentsForDay} from "helpers/selectors";
 
 export default function useApplicationData() {
-  const setDay = day => setState({ ...state, day });
 
   const [state, setState] = useState({
     day: "Monday",
@@ -12,13 +11,15 @@ export default function useApplicationData() {
     appointments: {},
     interviewers: null
   })
-
+  const setDay = day => setState({ ...state, day });
+  
   useEffect(() => {
     Promise.all([
       axios.get('/api/days'),
       axios.get('/api/appointments'),
       axios.get('api/interviewers')
     ]).then((response) => {
+      console.log(response[2], "HERE")
       setState(prev => ({...prev, days: response[0].data, appointments: response[1].data, interviewers: response[2].data}));
     });
   }, [])
@@ -43,18 +44,30 @@ export default function useApplicationData() {
       [id]: appointment
     };
 
-    return axios.put(`/api/appointments/${id}`, {interview})
-      .then((res) => {setState({...state, appointments})})
-      .then(res => {
-        axios.put(`api/days/`, {spots: spotsRemaining()})
-      })
+    // return axios.put(`/api/appointments/${id}`, {interview})
+    //   .then((res) => {setState({...state, appointments})})
+    //   .then(res => {
+    //     axios.put(`api/days/`, {spots: spotsRemaining()})
+    //   })
+
+    return Promise.all([
+      axios.put(`/api/appointments/${id}`, {interview}),
+      axios.put(`api/days/`, {spots: spotsRemaining()})
+    ]).then((response) => {
+      {setState({...state, appointments})}
+    });
   }
 
   function cancelInterview(id) {
-    return axios.delete(`api/appointments/${id}`)
-      .then(() => {
-        axios.put(`api/days/`, {spots: spotsRemaining()})
-      })
+    // return axios.delete(`api/appointments/${id}`)
+    //   .then(() => {
+    //     axios.put(`api/days/`, {spots: spotsRemaining()})
+    //   })
+
+    return Promise.all([
+      axios.delete(`api/appointments/${id}`),
+      axios.put(`api/days/`, {spots: spotsRemaining()})
+    ]);
   }
 
   return {state, setDay, bookInterview, cancelInterview}
